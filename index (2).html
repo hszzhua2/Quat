@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>量子物理可视化：波粒二象性与双缝干涉</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'quantum-blue': '#0f172a',
+                        'quantum-cyan': '#38bdf8',
+                        'quantum-cyan-dark': '#0ea5e9',
+                        'quantum-yellow': '#fbbf24',
+                        'quantum-red': '#ef4444',
+                        'quantum-panel': '#1e293b',
+                        'quantum-panel-dark': '#0f172a',
+                        'quantum-text': '#e2e8f0',
+                        'quantum-text-muted': '#94a3b8',
+                    },
+                    fontFamily: {
+                        'quantum': ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'quantum': '0 0 20px rgba(56, 189, 248, 0.3)',
+                        'quantum-glow': '0 0 15px rgba(56, 189, 248, 0.5)',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                    },
+                    keyframes: {
+                        glow: {
+                            '0%': { boxShadow: '0 0 5px rgba(56, 189, 248, 0.5)' },
+                            '100%': { boxShadow: '0 0 20px rgba(56, 189, 248, 0.8)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+            }
+            .border-glow {
+                box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+            }
+            .grid-bg {
+                background-image: 
+                    linear-gradient(rgba(56, 189, 248, 0.1) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(56, 189, 248, 0.1) 1px, transparent 1px);
+                background-size: 20px 20px;
+            }
+            .slider-track {
+                height: 4px;
+                background: rgba(56, 189, 248, 0.2);
+                border-radius: 2px;
+            }
+            .slider-thumb {
+                width: 16px;
+                height: 16px;
+                background: #38bdf8;
+                border-radius: 50%;
+                cursor: pointer;
+                box-shadow: 0 0 5px rgba(56, 189, 248, 0.8);
+                transition: all 0.2s ease;
+            }
+            .slider-thumb:hover {
+                transform: scale(1.2);
+                box-shadow: 0 0 10px rgba(56, 189, 248, 1);
+            }
+            .slider-thumb:active {
+                transform: scale(1.3);
+            }
+            .glass-effect {
+                background: rgba(30, 41, 59, 0.7);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+            }
+        }
+    </style>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            font-family: 'Inter', system-ui, sans-serif;
+            overflow-x: hidden;
+        }
+        
+        canvas {
+            display: block;
+            background: #020617;
+        }
+        
+        /* 开关样式 */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(148, 163, 184, 0.3);
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #38bdf8;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(30px);
+        }
+        
+        /* 滑块样式 */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: rgba(56, 189, 248, 0.2);
+            border-radius: 2px;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #38bdf8;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(56, 189, 248, 0.8);
+            transition: all 0.2s ease;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 1);
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:active {
+            transform: scale(1.3);
+        }
+        
+        /* 按钮动画 */
+        .btn-hover-effect {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-hover-effect:after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.5s, height 0.5s;
+        }
+        
+        .btn-hover-effect:hover:after {
+            width: 300px;
+            height: 300px;
+        }
+        
+        /* 粒子动画 */
+        .particle {
+            position: absolute;
+            background: #38bdf8;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+            animation: particle-animation 2s ease-out forwards;
+        }
+        
+        @keyframes particle-animation {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(0);
+                opacity: 0;
+            }
+        }
+        
+        /* 波线动画 */
+        .wave-line {
+            position: absolute;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+            transform-origin: left center;
+            animation: wave-animation 2s linear infinite;
+        }
+        
+        @keyframes wave-animation {
+            0% {
+                transform: scaleX(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            100% {
+                transform: scaleX(1);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-quantum-blue font-quantum">
+    <!-- 粒子背景 -->
+    <div id="particles-bg" class="fixed top-0 left-0 w-full h-full pointer-events-none"></div>
+    
+    <div class="min-h-screen flex flex-col">
+        <!-- 顶部导航 -->
+        <header class="py-4 px-6 md:px-12 flex justify-between items-center border-b border-quantum-cyan/20 bg-quantum-panel-dark/80 backdrop-blur-md">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-full bg-quantum-cyan/20 flex items-center justify-center border border-quantum-cyan/30">
+                    <i class="fa fa-atom text-quantum-cyan text-xl"></i>
+                </div>
+                <h1 class="text-2xl font-light text-quantum-text text-shadow">量子<span class="text-quantum-cyan font-normal">实验室</span></h1>
+            </div>
+            <div class="hidden md:flex items-center space-x-6">
+                <a href="#" class="text-quantum-text-muted hover:text-quantum-cyan transition-colors">关于</a>
+                <a href="#" class="text-quantum-text-muted hover:text-quantum-cyan transition-colors">理论基础</a>
+                <a href="#" class="text-quantum-text-muted hover:text-quantum-cyan transition-colors">更多实验</a>
+            </div>
+            <button class="md:hidden text-quantum-text">
+                <i class="fa fa-bars text-xl"></i>
+            </button>
+        </header>
+        
+        <!-- 主要内容 -->
+        <main class="flex-grow flex flex-col md:flex-row p-4 md:p-8 gap-6">
+            <!-- 左侧：实验区域 -->
+            <div class="w-full md:w-2/3 flex flex-col gap-4">
+                <div class="bg-quantum-panel rounded-xl p-4 border border-quantum-cyan/20 shadow-quantum">
+                    <h2 class="text-xl font-medium text-quantum-text mb-2">双缝干涉实验</h2>
+                    <p class="text-quantum-text-muted text-sm mb-4">观察粒子（光子/电子）如何穿越双缝。开启"探测器"将导致波函数坍缩，干涉条纹消失。</p>
+                    
+                    <div class="relative w-full" style="height: 450px;">
+                        <div id="canvas-container" class="absolute inset-0 rounded-lg overflow-hidden border border-quantum-cyan/30 shadow-quantum-glow grid-bg">
+                            <canvas id="simCanvas" width="800" height="400" class="w-full h-full"></canvas>
+                        </div>
+                        
+                        <!-- 实验状态指示器 -->
+                        <div class="absolute top-4 right-4 glass-effect rounded-lg px-3 py-2 text-sm flex items-center space-x-2">
+                            <div id="status-indicator" class="w-3 h-3 rounded-full bg-quantum-cyan animate-pulse"></div>
+                            <span id="status-text">运行中</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-center mt-4 gap-8 text-sm text-quantum-text-muted">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full bg-quantum-yellow mr-2"></div>
+                            <span>发射源 (Source)</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full bg-quantum-cyan mr-2"></div>
+                            <span>双缝 (Slits)</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full bg-quantum-red mr-2"></div>
+                            <span>屏幕 (Screen)</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 数据可视化 -->
+                <div class="bg-quantum-panel rounded-xl p-4 border border-quantum-cyan/20 shadow-quantum">
+                    <h2 class="text-xl font-medium text-quantum-text mb-2">强度分布</h2>
+                    <div class="w-full h-40 bg-quantum-panel-dark rounded-lg p-2">
+                        <canvas id="intensityCanvas" width="800" height="150" class="w-full h-full"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右侧：控制面板 -->
+            <div class="w-full md:w-1/3 flex flex-col gap-4">
+                <!-- 实验控制 -->
+                <div class="bg-quantum-panel rounded-xl p-5 border border-quantum-cyan/20 shadow-quantum">
+                    <h2 class="text-xl font-medium text-quantum-text mb-4">实验控制</h2>
+                    
+                    <div class="space-y-6">
+                        <!-- 实验模式 -->
+                        <div>
+                            <label class="block text-quantum-text-muted text-sm mb-2">实验模式</label>
+                            <div class="flex rounded-lg overflow-hidden border border-quantum-cyan/30">
+                                <button id="singleSlitBtn" class="flex-1 py-2 px-4 text-center text-sm transition-colors bg-quantum-panel-dark hover:bg-quantum-cyan/20">
+                                    单缝模式
+                                </button>
+                                <button id="doubleSlitBtn" class="flex-1 py-2 px-4 text-center text-sm transition-colors bg-quantum-cyan text-quantum-blue font-medium">
+                                    双缝模式
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 观察者模式 -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-quantum-text-muted text-sm">观察者模式</label>
+                                <span id="observerStatus" class="text-xs px-2 py-1 rounded-full bg-quantum-cyan/20 text-quantum-cyan">
+                                    关闭 (波动模式)
+                                </span>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="observerToggle" onchange="toggleObserver()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        
+                        <!-- 粒子发射速率 -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-quantum-text-muted text-sm">粒子发射速率</label>
+                                <span id="emissionRateValue" class="text-xs px-2 py-1 rounded-full bg-quantum-panel-dark">
+                                    3 粒子/帧
+                                </span>
+                            </div>
+                            <input type="range" id="emissionRate" min="1" max="10" value="3" class="w-full" oninput="updateEmissionRate(this.value)">
+                        </div>
+                        
+                        <!-- 缝隙宽度 -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-quantum-text-muted text-sm">缝隙宽度</label>
+                                <span id="slitWidthValue" class="text-xs px-2 py-1 rounded-full bg-quantum-panel-dark">
+                                    10 像素
+                                </span>
+                            </div>
+                            <input type="range" id="slitWidth" min="2" max="20" value="10" class="w-full" oninput="updateSlitWidth(this.value)">
+                        </div>
+                        
+                        <!-- 缝隙间距 (仅双缝模式) -->
+                        <div id="slitGapContainer">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-quantum-text-muted text-sm">缝隙间距</label>
+                                <span id="slitGapValue" class="text-xs px-2 py-1 rounded-full bg-quantum-panel-dark">
+                                    40 像素
+                                </span>
+                            </div>
+                            <input type="range" id="slitGap" min="20" max="80" value="40" class="w-full" oninput="updateSlitGap(this.value)">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 操作按钮 -->
+                <div class="bg-quantum-panel rounded-xl p-5 border border-quantum-cyan/20 shadow-quantum">
+                    <div class="grid grid-cols-2 gap-3">
+                        <button id="resetBtn" class="btn-hover-effect py-3 px-4 rounded-lg bg-quantum-panel-dark hover:bg-quantum-panel text-quantum-text text-sm font-medium transition-colors border border-quantum-cyan/30">
+                            <i class="fa fa-refresh mr-2"></i>重置屏幕
+                        </button>
+                        <button id="clearBtn" class="btn-hover-effect py-3 px-4 rounded-lg bg-quantum-red/20 hover:bg-quantum-red/30 text-quantum-red text-sm font-medium transition-colors border border-quantum-red/30">
+                            <i class="fa fa-trash mr-2"></i>清除所有
+                        </button>
+                        <button id="pauseBtn" class="btn-hover-effect py-3 px-4 rounded-lg bg-quantum-yellow/20 hover:bg-quantum-yellow/30 text-quantum-yellow text-sm font-medium transition-colors border border-quantum-yellow/30 col-span-2">
+                            <i class="fa fa-pause mr-2"></i>暂停/继续
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 量子理论简介 -->
+                <div class="bg-quantum-panel rounded-xl p-5 border border-quantum-cyan/20 shadow-quantum">
+                    <h2 class="text-xl font-medium text-quantum-text mb-2">波粒二象性</h2>
+                    <p class="text-quantum-text-muted text-sm">
+                        量子力学中的波粒二象性表明，微观粒子（如光子、电子）同时具有波动性和粒子性。双缝干涉实验是展示这一现象的经典实验：当没有观察者时，粒子表现出干涉条纹（波动特性）；当有观察者测量粒子通过哪个缝隙时，干涉条纹消失，粒子表现出粒子特性。
+                    </p>
+                </div>
+            </div>
+        </main>
+        
+        <!-- 底部信息 -->
+        <footer class="py-4 px-6 md:px-12 border-t border-quantum-cyan/20 bg-quantum-panel-dark/80 backdrop-blur-md text-center text-quantum-text-muted text-sm">
+            <p>© 2025 量子实验室 | 波粒二象性与双缝干涉实验可视化</p>
+        </footer>
+    </div>
+
+    <script>
+        // 全局变量
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const intensityCanvas = document.getElementById('intensityCanvas');
+        const intensityCtx = intensityCanvas.getContext('2d');
+        
+        // 配置参数
+        const width = canvas.width;
+        const height = canvas.height;
+        const sourceX = 50;
+        const sourceY = height / 2;
+        const wallX = 300;
+        let slitGap = 40; // 两个缝之间的距离
+        let slitWidth = 10; // 缝的宽度
+        const screenX = 750;
+        
+        let particles = [];
+        let hits = new Array(height).fill(0); // 屏幕上的命中统计
+        let isObserverOn = false; // 观察者模式开关
+        let isDoubleSlit = true; // 双缝模式开关
+        let isPaused = false; // 暂停状态
+        let emissionRate = 3; // 每帧发射的粒子数
+        let frameCount = 0;
+        let animationId;
+        
+        // 粒子类
+        class Particle {
+            constructor() {
+                this.x = sourceX;
+                this.y = sourceY;
+                // 初始速度
+                this.vx = 4 + Math.random(); 
+                this.vy = (Math.random() - 0.5) * 2; 
+                this.phase = 0; // 0: 发射源到墙, 1: 墙到屏幕
+                this.color = '#fbbf24';
+                this.dead = false;
+                this.wavePhase = Math.random() * Math.PI * 2; // 波相位
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // 阶段 1: 到达双缝墙
+                if (this.phase === 0 && this.x >= wallX) {
+                    // 检查是否对准了缝隙
+                    let isThrough = false;
+                    
+                    if (isDoubleSlit) {
+                        // 双缝模式
+                        const upperSlit = (this.y > height/2 - slitGap/2 - slitWidth/2 && this.y < height/2 - slitGap/2 + slitWidth/2);
+                        const lowerSlit = (this.y > height/2 + slitGap/2 - slitWidth/2 && this.y < height/2 + slitGap/2 + slitWidth/2);
+                        isThrough = upperSlit || lowerSlit;
+                        
+                        if (isThrough) {
+                            this.phase = 1;
+                            this.performQuantumMagic(upperSlit);
+                        } else {
+                            // 撞墙消失
+                            this.dead = true; 
+                        }
+                    } else {
+                        // 单缝模式
+                        const singleSlit = (this.y > height/2 - slitWidth/2 && this.y < height/2 + slitWidth/2);
+                        isThrough = singleSlit;
+                        
+                        if (isThrough) {
+                            this.phase = 1;
+                            this.performQuantumMagic(true); // 单缝模式下默认为上部缝隙
+                        } else {
+                            // 撞墙消失
+                            this.dead = true; 
+                        }
+                    }
+                }
+
+                // 阶段 2: 到达屏幕
+                if (this.phase === 1 && this.x >= screenX) {
+                    this.dead = true;
+                    this.recordHit();
+                }
+            }
+
+            // 核心物理逻辑模拟
+            performQuantumMagic(isUpper) {
+                if (isObserverOn) {
+                    // === 粒子模式 (经典物理) ===
+                    // 就像扔石子，穿过缝隙后基本沿直线继续飞，稍微有一点散射
+                    this.vx = 4;
+                    // 散射角度很小
+                    this.vy += (Math.random() - 0.5) * 0.5; 
+                    this.color = '#ef4444'; // 红色代表被观测的粒子
+                } else {
+                    // === 波动模式 (量子干涉) ===
+                    // 粒子通过缝隙后，其落点概率由波的干涉决定
+                    // 这里我们用数学模拟干涉条纹的概率分布
+                    
+                    // 模拟衍射后的随机角度，但受干涉公式加权
+                    // 简化模拟：人为引导粒子飞向"亮条纹"区域
+                    
+                    // 1. 随机选一个目标Y值
+                    let targetY;
+                    let accepted = false;
+                    
+                    // 蒙特卡洛采样：根据干涉图样概率分布选择路径
+                    while (!accepted) {
+                        let testY = Math.random() * height;
+                        let angle = (testY - height/2) / (screenX - wallX); // 近似角度
+                        
+                        let intensity;
+                        
+                        if (isDoubleSlit) {
+                            // 双缝干涉强度公式近似: I = cos^2(k * d * sin(theta))
+                            // 调整系数以匹配画布尺寸
+                            intensity = Math.cos(angle * 60); 
+                            intensity = intensity * intensity; // 强度是振幅的平方
+                        } else {
+                            // 单缝衍射强度公式近似: I = (sin(x)/x)^2
+                            let x = angle * 30;
+                            if (Math.abs(x) < 0.001) x = 0.001; // 避免除以零
+                            intensity = Math.sin(x) / x;
+                            intensity = intensity * intensity; // 强度是振幅的平方
+                        }
+
+                        // 给一点中心亮斑的权重（单缝衍射包络）
+                        let envelope = Math.exp(-0.00005 * Math.pow(testY - height/2, 2));
+                        
+                        let probability = intensity * envelope;
+
+                        if (Math.random() < probability) {
+                            targetY = testY;
+                            accepted = true;
+                        }
+                    }
+                    
+                    // 计算使得粒子飞向 targetY 的速度
+                    let timeToScreen = (screenX - this.x) / this.vx;
+                    this.vy = (targetY - this.y) / timeToScreen;
+                    this.color = '#38bdf8'; // 蓝色代表波函数未坍缩
+                }
+            }
+
+            recordHit() {
+                let index = Math.floor(this.y);
+                if (index >= 0 && index < height) {
+                    hits[index]++;
+                }
+            }
+
+            draw() {
+                // 绘制粒子
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                
+                // 如果是波动模式，绘制波线
+                if (!isObserverOn && this.phase === 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(this.x + 10, this.y);
+                    ctx.strokeStyle = this.color;
+                    ctx.globalAlpha = 0.5;
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+            }
+        }
+
+        // 绘制场景
+        function drawScene() {
+            // 1. 绘制背景（淡出效果，形成拖尾）
+            ctx.fillStyle = 'rgba(2, 6, 23, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+
+            // 2. 绘制墙体
+            ctx.fillStyle = '#475569';
+            
+            if (isDoubleSlit) {
+                // 双缝模式
+                // 上墙
+                ctx.fillRect(wallX, 0, 5, height/2 - slitGap/2 - slitWidth/2);
+                // 中墙
+                ctx.fillRect(wallX, height/2 - slitGap/2 + slitWidth/2, 5, slitGap - slitWidth);
+                // 下墙
+                ctx.fillRect(wallX, height/2 + slitGap/2 + slitWidth/2, 5, height);
+            } else {
+                // 单缝模式
+                // 上墙
+                ctx.fillRect(wallX, 0, 5, height/2 - slitWidth/2);
+                // 下墙
+                ctx.fillRect(wallX, height/2 + slitWidth/2, 5, height);
+            }
+
+            // 3. 绘制屏幕线
+            ctx.strokeStyle = '#94a3b8';
+            ctx.beginPath();
+            ctx.moveTo(screenX, 0);
+            ctx.lineTo(screenX, height);
+            ctx.stroke();
+
+            // 4. 绘制结果统计图 (Intensity Graph)
+            ctx.fillStyle = isObserverOn ? 'rgba(239, 68, 68, 0.5)' : 'rgba(56, 189, 248, 0.5)';
+            ctx.beginPath();
+            for (let y = 0; y < height; y++) {
+                // 缩放一下长度以便显示
+                let barLength = hits[y] * 2; 
+                ctx.fillRect(screenX + 2, y, barLength, 1);
+            }
+            
+            // 5. 绘制发射源
+            ctx.beginPath();
+            ctx.arc(sourceX, sourceY, 8, 0, Math.PI * 2);
+            ctx.fillStyle = '#fbbf24';
+            ctx.fill();
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // 6. 绘制缝隙高亮
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            
+            if (isDoubleSlit) {
+                // 双缝
+                ctx.beginPath();
+                ctx.moveTo(wallX, height/2 - slitGap/2 - slitWidth/2);
+                ctx.lineTo(wallX, height/2 - slitGap/2 + slitWidth/2);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(wallX, height/2 + slitGap/2 - slitWidth/2);
+                ctx.lineTo(wallX, height/2 + slitGap/2 + slitWidth/2);
+                ctx.stroke();
+            } else {
+                // 单缝
+                ctx.beginPath();
+                ctx.moveTo(wallX, height/2 - slitWidth/2);
+                ctx.lineTo(wallX, height/2 + slitWidth/2);
+                ctx.stroke();
+            }
+        }
+        
+        // 绘制强度分布图
+        function drawIntensityGraph() {
+            const graphWidth = intensityCanvas.width;
+            const graphHeight = intensityCanvas.height;
+            
+            // 清除画布
+            intensityCtx.fillStyle = '#0f172a';
+            intensityCtx.fillRect(0, 0, graphWidth, graphHeight);
+            
+            // 绘制网格
+            intensityCtx.strokeStyle = 'rgba(148, 163, 184, 0.1)';
+            intensityCtx.lineWidth = 1;
+            
+            // 水平线
+            for (let y = 0; y <= graphHeight; y += 30) {
+                intensityCtx.beginPath();
+                intensityCtx.moveTo(0, y);
+                intensityCtx.lineTo(graphWidth, y);
+                intensityCtx.stroke();
+            }
+            
+            // 垂直线
+            for (let x = 0; x <= graphWidth; x += 50) {
+                intensityCtx.beginPath();
+                intensityCtx.moveTo(x, 0);
+                intensityCtx.lineTo(x, graphHeight);
+                intensityCtx.stroke();
+            }
+            
+            // 找出最大值以便缩放
+            let maxHits = Math.max(...hits, 1);
+            
+            // 绘制强度曲线
+            intensityCtx.beginPath();
+            intensityCtx.moveTo(0, graphHeight);
+            
+            for (let y = 0; y < height; y++) {
+                const x = (y / height) * graphWidth;
+                const intensity = (hits[y] / maxHits) * graphHeight;
+                intensityCtx.lineTo(x, graphHeight - intensity);
+            }
+            
+            intensityCtx.lineTo(graphWidth, graphHeight);
+            intensityCtx.fillStyle = isObserverOn ? 'rgba(239, 68, 68, 0.3)' : 'rgba(56, 189, 248, 0.3)';
+            intensityCtx.fill();
+            intensityCtx.strokeStyle = isObserverOn ? '#ef4444' : '#38bdf8';
+            intensityCtx.lineWidth = 2;
+            intensityCtx.stroke();
+            
+            // 绘制中心线
+            intensityCtx.strokeStyle = 'rgba(148, 163, 184, 0.3)';
+            intensityCtx.lineWidth = 1;
+            intensityCtx.beginPath();
+            intensityCtx.moveTo(graphWidth / 2, 0);
+            intensityCtx.lineTo(graphWidth / 2, graphHeight);
+            intensityCtx.stroke();
+            
+            // 绘制标签
+            intensityCtx.fillStyle = '#94a3b8';
+            intensityCtx.font = '10px Arial';
+            intensityCtx.textAlign = 'center';
+            intensityCtx.fillText('强度分布', graphWidth / 2, 15);
+        }
+
+        // 主循环
+        function loop() {
+            if (!isPaused) {
+                drawScene();
+                drawIntensityGraph();
+
+                // 发射新粒子
+                for(let i=0; i<emissionRate; i++) {
+                    particles.push(new Particle());
+                }
+
+                // 更新和绘制粒子
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    let p = particles[i];
+                    p.update();
+                    p.draw();
+                    if (p.dead) {
+                        particles.splice(i, 1);
+                    }
+                }
+                
+                frameCount++;
+            }
+            
+            animationId = requestAnimationFrame(loop);
+        }
+
+        // 交互控制函数
+        function resetSimulation() {
+            hits = new Array(height).fill(0);
+            // 不清除粒子，让它们继续飞行到屏幕
+            createParticlesEffect(screenX, sourceY, 10, '#38bdf8');
+        }
+        
+        function clearAll() {
+            hits = new Array(height).fill(0);
+            particles = [];
+            createParticlesEffect(canvas.width / 2, canvas.height / 2, 20, '#ef4444');
+        }
+        
+        function toggleObserver() {
+            isObserverOn = document.getElementById('observerToggle').checked;
+            const status = document.getElementById('observerStatus');
+            
+            if (isObserverOn) {
+                status.textContent = "开启 (粒子模式)";
+                status.className = "text-xs px-2 py-1 rounded-full bg-quantum-yellow/20 text-quantum-yellow";
+            } else {
+                status.textContent = "关闭 (波动模式)";
+                status.className = "text-xs px-2 py-1 rounded-full bg-quantum-cyan/20 text-quantum-cyan";
+            }
+            
+            // 切换模式时创建粒子效果
+            createParticlesEffect(wallX, sourceY, 15, isObserverOn ? '#ef4444' : '#38bdf8');
+        }
+        
+        function toggleSlitMode() {
+            isDoubleSlit = !isDoubleSlit;
+            const singleBtn = document.getElementById('singleSlitBtn');
+            const doubleBtn = document.getElementById('doubleSlitBtn');
+            const slitGapContainer = document.getElementById('slitGapContainer');
+            
+            if (isDoubleSlit) {
+                // 双缝模式
+                singleBtn.className = "flex-1 py-2 px-4 text-center text-sm transition-colors bg-quantum-panel-dark hover:bg-quantum-cyan/20";
+                doubleBtn.className = "flex-1 py-2 px-4 text-center text-sm transition-colors bg-quantum-cyan text-quantum-blue font-medium";
+                slitGapContainer.style.display = "block";
+            } else {
+                // 单缝模式
+                singleBtn.className = "flex-1 py-2 px-4 text-center text-sm transition-colors bg-quantum-cyan text-quantum-blue font-medium";
+                doubleBtn.className = "flex-1 py-2 px-4 text-center text-sm transition-colors bg-quantum-panel-dark hover:bg-quantum-cyan/20";
+                slitGapContainer.style.display = "none";
+            }
+            
+            // 重置屏幕
+            resetSimulation();
+            
+            // 创建粒子效果
+            createParticlesEffect(wallX, height/2, 15, '#38bdf8');
+        }
+        
+        function togglePause() {
+            isPaused = !isPaused;
+            const pauseBtn = document.getElementById('pauseBtn');
+            const statusIndicator = document.getElementById('status-indicator');
+            const statusText = document.getElementById('status-text');
+            
+            if (isPaused) {
+                pauseBtn.innerHTML = '<i class="fa fa-play mr-2"></i>暂停/继续';
+                statusIndicator.className = "w-3 h-3 rounded-full bg-quantum-yellow";
+                statusText.textContent = "已暂停";
+            } else {
+                pauseBtn.innerHTML = '<i class="fa fa-pause mr-2"></i>暂停/继续';
+                statusIndicator.className = "w-3 h-3 rounded-full bg-quantum-cyan animate-pulse";
+                statusText.textContent = "运行中";
+            }
+        }
+        
+        function updateEmissionRate(value) {
+            emissionRate = parseInt(value);
+            document.getElementById('emissionRateValue').textContent = `${emissionRate} 粒子/帧`;
+        }
+        
+        function updateSlitWidth(value) {
+            slitWidth = parseInt(value);
+            document.getElementById('slitWidthValue').textContent = `${slitWidth} 像素`;
+        }
+        
+        function updateSlitGap(value) {
+            slitGap = parseInt(value);
+            document.getElementById('slitGapValue').textContent = `${slitGap} 像素`;
+        }
+        
+        // 创建粒子效果
+        function createParticlesEffect(x, y, count, color) {
+            const particlesBg = document.getElementById('particles-bg');
+            
+            for (let i = 0; i < count; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                // 随机大小
+                const size = Math.random() * 4 + 2;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                
+                // 随机位置（以x,y为中心）
+                const offsetX = (Math.random() - 0.5) * 20;
+                const offsetY = (Math.random() - 0.5) * 20;
+                particle.style.left = `${x + offsetX}px`;
+                particle.style.top = `${y + offsetY}px`;
+                
+                // 设置颜色
+                particle.style.background = color;
+                
+                // 添加到背景
+                particlesBg.appendChild(particle);
+                
+                // 动画结束后移除
+                setTimeout(() => {
+                    particlesBg.removeChild(particle);
+                }, 2000);
+            }
+        }
+        
+        // 创建波线效果
+        function createWaveEffect(x, y, color) {
+            const particlesBg = document.getElementById('particles-bg');
+            const wave = document.createElement('div');
+            wave.className = 'wave-line';
+            
+            // 设置初始位置和大小
+            wave.style.left = `${x}px`;
+            wave.style.top = `${y}px`;
+            wave.style.width = '200px';
+            wave.style.background = `linear-gradient(90deg, transparent, ${color}, transparent)`;
+            
+            // 添加到背景
+            particlesBg.appendChild(wave);
+            
+            // 动画结束后移除
+            setTimeout(() => {
+                particlesBg.removeChild(wave);
+            }, 2000);
+        }
+        
+        // 事件监听
+        document.getElementById('singleSlitBtn').addEventListener('click', function() {
+            if (isDoubleSlit) toggleSlitMode();
+        });
+        
+        document.getElementById('doubleSlitBtn').addEventListener('click', function() {
+            if (!isDoubleSlit) toggleSlitMode();
+        });
+        
+        document.getElementById('resetBtn').addEventListener('click', resetSimulation);
+        document.getElementById('clearBtn').addEventListener('click', clearAll);
+        document.getElementById('pauseBtn').addEventListener('click', togglePause);
+        
+        // 窗口大小调整
+        function resizeCanvas() {
+            const container = document.getElementById('canvas-container');
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            
+            // 保持宽高比
+            const ratio = width / height;
+            let newWidth = containerWidth;
+            let newHeight = containerWidth / ratio;
+            
+            if (newHeight > containerHeight) {
+                newHeight = containerHeight;
+                newWidth = containerHeight * ratio;
+            }
+            
+            canvas.style.width = `${newWidth}px`;
+            canvas.style.height = `${newHeight}px`;
+            
+            // 调整强度图
+            intensityCanvas.style.width = '100%';
+            intensityCanvas.style.height = '100%';
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        
+        // 初始化
+        function init() {
+            resizeCanvas();
+            loop();
+            
+            // 创建初始粒子效果
+            createParticlesEffect(sourceX, sourceY, 10, '#fbbf24');
+        }
+        
+        // 启动
+        init();
+    </script>
+</body>
+</html>
